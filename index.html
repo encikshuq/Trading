@@ -1,510 +1,412 @@
 <!DOCTYPE html>
-<html lang="ms">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AI Trading Office · Live</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Control - AI Trading System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { 
-    --bg:#0A0E17; --surface:#131826; --border:#1F2937; 
-    --gold:#F5B942; --buy:#10B981; --sell:#EF4444; --warn:#F59E0B; 
+  /* ===== PALETTE WARNA ===== */
+  :root {
+    --bg-dark: #07090E;
+    --bg-panel: #0F131C;
+    --border-color: #1E2433;
+    --text-main: #E2E8F0;
+    --text-muted: #64748B;
+    --teal: #14B8A6;
+    --blue: #3B82F6;
+    --green: #10B981;
+    --orange: #F59E0B;
+    --red: #EF4444;
   }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Inter',sans-serif; background:var(--bg); color:#E5E7EB; overflow:hidden; height: 100vh; width: 100vw; }
-  
-  .app { height: 100%; display:flex; flex-direction:column; }
-  
-  /* ===== Topbar ===== */
-  .topbar { height:56px; padding:0 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(10,14,23,0.95); backdrop-filter:blur(12px); flex-shrink:0; }
-  .brand { display:flex; align-items:center; gap:10px; }
-  .logo { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#F5B942,#CA8A04); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--bg); font-size:13px; }
-  .title { font-size:14px; font-weight:600; }
-  .subtitle { font-size:10px; color:#6B7280; }
-  .topbar-right { display:flex; align-items:center; gap:12px; }
-  .live { display:flex; align-items:center; gap:6px; font-size:11px; color:#9CA3AF; }
-  .live .dot { width:8px; height:8px; border-radius:50%; background:var(--buy); animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-  .clock { font-family:'JetBrains Mono',monospace; font-size:12px; color:#6B7280; }
-  .kill-btn { padding:6px 12px; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:var(--sell); font-size:12px; font-weight:500; cursor:pointer; transition:all 0.2s; font-family:inherit; }
-  .kill-btn:hover { background:rgba(239,68,68,0.2); }
-  .kill-btn.active { background:var(--sell); color:#fff; }
-  
-  /* ===== Main Layout ===== */
-  .main { flex:1; display:flex; gap:16px; padding:16px; min-height:0; }
-  
-  .stage { flex:1; position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:radial-gradient(ellipse at center,#0F1626 0%,#0A0E17 70%); }
-  #office { display:block; width:100%; height:100%; }
-  
-  .legend { position:absolute; bottom:12px; left:12px; background:rgba(19,24,38,0.85); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:8px; padding:10px 12px; font-size:10px; z-index:10; pointer-events:none; }
-  .legend-title { font-weight:600; font-size:11px; margin-bottom:6px; }
-  .legend-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; }
-  .legend-item { display:flex; align-items:center; gap:6px; color:#9CA3AF; }
-  .legend-item span { width:8px; height:8px; border-radius:2px; }
-  
-  .side { width:300px; display:flex; flex-direction:column; gap:12px; flex-shrink:0; min-height:0; }
-  .log-panel { background:rgba(19,24,38,0.85); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:12px; padding:12px; flex:1; display:flex; flex-direction:column; min-height:0; }
-  .log-header { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:600; margin-bottom:8px; }
-  .log-count { font-family:'JetBrains Mono',monospace; font-size:10px; color:#6B7280; }
-  .log-list { overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:6px; font-size:11px; font-family:'JetBrains Mono',monospace; }
-  .log-entry { display:flex; align-items:flex-start; gap:6px; animation:fade 0.3s ease-out; }
-  @keyframes fade { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:translateY(0);} }
-  .log-who { min-width:24px; font-weight:600; }
-  .log-time { color:#6B7280; font-size:10px; }
-  .log-msg { color:#D1D5DB; flex:1; }
-  
-  .status-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px; font-size:11px; }
-  .status-title { font-size:12px; font-weight:600; margin-bottom:8px; }
-  .status-row { display:flex; justify-content:space-between; padding:3px 0; }
-  .status-row span:first-child { color:#6B7280; }
-  .status-row span:last-child { font-family:'JetBrains Mono',monospace; }
-  .gold{color:var(--gold);} .green{color:var(--buy);} .warn{color:var(--warn);}
-  
-  ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg-dark); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-  /* =========================================
-     MOBILE RESPONSIVE MAGIC (Untuk Phone)
-     ========================================= */
-  @media (max-width: 768px) {
-    .topbar { padding: 0 10px; }
-    .subtitle, .clock { display: none; } /* Buang benda tak penting kat phone */
-    
-    .main { 
-      flex-direction: column; /* Susun atas-bawah */
-      padding: 8px; 
-      gap: 8px; 
-    }
-    
-    .stage { 
-      flex: 1.2; /* Ambil ruang lebih sikit untuk 3D */
-      min-height: 350px;
-    }
-    
-    .side { 
-      width: 100%; 
-      height: 220px; /* Kunci tinggi log supaya tak makan skrin */
-      flex-direction: row;
-    }
-    
-    .status-panel { 
-      display: none; /* Sembunyikan status kewangan kat phone */
-    }
-    
-    .legend { 
-      padding: 6px; font-size: 9px; 
-      bottom: 8px; left: 8px;
-    }
-    
-    .log-panel {
-      padding: 8px;
-    }
-  }
+  /* ===== SIDEBAR ===== */
+  .sidebar { width: 250px; background: var(--bg-dark); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 16px; z-index: 10; }
+  .logo { font-size: 18px; font-weight: 700; color: var(--teal); margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; margin-bottom: 4px; cursor: pointer; transition: 0.2s; }
+  .nav-item:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+  .nav-item.active { background: rgba(20, 184, 166, 0.1); color: var(--teal); border-left: 3px solid var(--teal); }
+  .nav-icon { width: 18px; height: 18px; fill: currentColor; }
+
+  /* ===== MAIN WRAPPER ===== */
+  .main-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  /* ===== TOPBAR ===== */
+  .topbar { height: 64px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: var(--bg-panel); z-index: 10; }
+  .topbar-left { display: flex; align-items: center; gap: 20px; font-size: 13px; color: var(--text-muted); }
+  .sys-stats { display: flex; gap: 16px; align-items: center; background: rgba(255,255,255,0.03); padding: 6px 12px; border-radius: 20px; }
+  .status-badges { display: flex; gap: 8px; }
+  .badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03); }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .badge.thinking { color: var(--blue); background: rgba(59, 130, 246, 0.1); }
+  .badge.thinking .dot { background: var(--blue); animation: pulse 2s infinite; }
+  .badge.working { color: var(--green); background: rgba(16, 185, 129, 0.1); }
+  .badge.working .dot { background: var(--green); }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+  /* ===== CONTENT AREA ===== */
+  .content { display: flex; flex: 1; overflow: hidden; position: relative; }
+  .view-container { flex: 1; position: relative; background-color: #05070A; overflow: hidden; display: flex; flex-direction: column; }
+  
+  .view-section { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+  .view-section.active { display: flex; flex-direction: column; }
+
+  /* ===== 1. OFFICE VIEW (Canvas) ===== */
+  #view-office { background: #07090E; position: relative; }
+  #officeCanvas { display: block; width: 100%; height: 100%; }
+
+  /* ===== 2. TRADINGVIEW VIEW ===== */
+  #view-tradingview { background: #000; }
+  .tv-header { padding: 12px 24px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+  #tradingview_chart { flex: 1; width: 100%; height: 100%; }
+
+  /* ===== 3. MT5 CONNECTION VIEW ===== */
+  #view-mt5 { justify-content: center; align-items: center; background: var(--bg-dark); }
+  .mt5-card { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .mt5-card h2 { font-size: 20px; margin-bottom: 8px; text-align: center; }
+  .mt5-card p { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .form-group input { width: 100%; padding: 12px 14px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; color: white; outline: none; }
+  .form-group input:focus { border-color: var(--teal); }
+  .btn-connect { width: 100%; padding: 14px; background: var(--teal); color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+  .btn-connect:hover { background: #0D9488; }
+
+  /* ===== RIGHT TELEMETRY PANEL ===== */
+  .telemetry-panel { width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; z-index: 10; }
+  .panel-header { padding: 20px; font-size: 14px; font-weight: 600; border-bottom: 1px solid var(--border-color); }
+  .log-list { padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; font-size: 12px; }
+  .log-item { display: flex; gap: 12px; animation: fadeIn 0.3s; }
+  .log-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: bold; font-size: 10px; }
+  .log-icon.info { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+  .log-icon.success { background: rgba(16, 185, 129, 0.2); color: var(--green); }
+  .log-text { color: var(--text-muted); line-height: 1.4; }
+  .log-text strong { color: var(--text-main); display: block; margin-bottom: 2px; }
+  @keyframes fadeIn { from{opacity:0; transform:translateY(-5px);} to{opacity:1; transform:translateY(0);} }
 </style>
 </head>
 <body>
 
-<div class="app">
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">Au</div>
-      <div>
-        <div class="title">AI Trading Office</div>
-        <div class="subtitle">XAUUSD · M15 · 6 staf AI bertugas</div>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div class="live"><span class="dot"></span><span>Live sim</span></div>
-      <div class="clock" id="clock">--:--:--</div>
-      <button class="kill-btn" id="killSwitch">⏻ Kill Switch</button>
-    </div>
-  </header>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2zm0 4l6 14H6l6-14z"/></svg><span>NEXUS AI</span></div>
+    <a class="nav-item active" onclick="switchView('office', this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3h8v8H3zm0 10h8v8H3zm10-10h8v8h-8zm0 10h8v8h-8z"/></svg><span>Mission Control</span></a>
+    <a class="nav-item" onclick="switchView('tradingview', this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 3v18h18V3H3zm16 16H5V5h14v14zM7 7h10v2H7zm0 4h10v2H7zm0 4h6v2H7z"/></svg><span>TradingView</span></a>
+    <a class="nav-item" onclick="switchView('mt5', this)"><svg class="nav-icon" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg><span>MT5 Account</span></a>
+  </aside>
 
-  <div class="main">
-    <div class="stage">
-      <canvas id="office"></canvas>
-      <div class="legend">
-        <div class="legend-title">Departments</div>
-        <div class="legend-grid">
-          <div class="legend-item"><span style="background:#3B82F6"></span>Analysis</div>
-          <div class="legend-item"><span style="background:#F5B942"></span>Control</div>
-          <div class="legend-item"><span style="background:#F59E0B"></span>Risk</div>
-          <div class="legend-item"><span style="background:#10B981"></span>Execution</div>
-          <div class="legend-item"><span style="background:#A855F7"></span>Research</div>
-          <div class="legend-item"><span style="background:#06B6D4"></span>Review</div>
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+    
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span style="font-size: 16px; font-weight: 600; color: var(--text-main); margin-right: 20px;" id="page-title">Mission Control</span>
+        <div class="sys-stats"><span>⚙️ CPU: 24%</span><span>📶 Network: 80ms</span></div>
+      </div>
+      <div class="status-badges">
+        <div class="badge idle"><div class="dot"></div> Idle</div>
+        <div class="badge thinking"><div class="dot"></div> Thinking</div>
+        <div class="badge working"><div class="dot"></div> Working</div>
+        <div class="badge error"><div class="dot"></div> Error</div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content">
+      <div class="view-container">
+
+        <!-- ================= 1. OFFICE VIEW (CANVAS) ================= -->
+        <div id="view-office" class="view-section active">
+          <canvas id="officeCanvas"></canvas>
         </div>
-      </div>
-    </div>
 
-    <aside class="side">
-      <div class="log-panel">
-        <div class="log-header"><span>Event Log</span><span class="log-count" id="counter">0</span></div>
-        <div id="log" class="log-list"></div>
+        <!-- ================= 2. TRADINGVIEW VIEW ================= -->
+        <div id="view-tradingview" class="view-section">
+          <div class="tv-header">
+            <h2 style="font-size: 14px;">📈 XAUUSD · Live Chart</h2>
+            <span style="font-size: 12px; color: var(--green); background: rgba(16,185,129,0.1); padding: 4px 10px; border-radius: 12px;">Market Open</span>
+          </div>
+          <div id="tradingview_chart"></div>
+        </div>
+
+        <!-- ================= 3. MT5 CONNECTION VIEW ================= -->
+        <div id="view-mt5" class="view-section">
+          <div class="mt5-card">
+            <h2>MetaTrader 5 Connection</h2>
+            <p>Connect your MT5 account to enable AI execution.</p>
+            <form onsubmit="connectMT5(event)">
+              <div class="form-group"><label>Login ID</label><input type="text" placeholder="e.g. 2847491" required></div>
+              <div class="form-group"><label>Password</label><input type="password" placeholder="••••••••" required></div>
+              <div class="form-group"><label>Server</label><input type="text" placeholder="e.g. ICMarkets-Demo" required></div>
+              <button type="submit" class="btn-connect" id="btn-connect">Connect Account</button>
+            </form>
+          </div>
+        </div>
+
       </div>
-      <div class="status-panel">
-        <div class="status-title">Live Status</div>
-        <div class="status-row"><span>Equity</span><span class="gold">$10,847.32</span></div>
-        <div class="status-row"><span>Daily P/L</span><span class="green">+$182.40</span></div>
-        <div class="status-row"><span>Open Pos</span><span>2 / 3</span></div>
-        <div class="status-row"><span>Drawdown</span><span class="warn">-1.2%</span></div>
-      </div>
-    </aside>
+
+      <!-- RIGHT TELEMETRY PANEL -->
+      <aside class="telemetry-panel">
+        <div class="panel-header">Telemetry Log</div>
+        <div class="log-list" id="telemetry-log"></div>
+      </aside>
+    </div>
   </div>
-</div>
 
 <script>
-// ==========================================
-// KONFIGURASI & STATE
-// ==========================================
-const canvas = document.getElementById('office');
-const ctx = canvas.getContext('2d');
+  // ==========================================
+  // NAVIGATION LOGIC
+  // ==========================================
+  function switchView(viewName, navElement) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + viewName).classList.add('active');
+    navElement.classList.add('active');
 
-let W=0, H=0;
-const TILE = { W: 56, H: 28 }; // Nilai default (Desktop)
-const GRID = { W: 14, H: 10 };
-let ORIGIN = { x: 0, y: 0 };
+    const titles = {'office': 'Mission Control', 'tradingview': 'Live Charts', 'mt5': 'MT5 Account'};
+    document.getElementById('page-title').textContent = titles[viewName];
 
-const AGENT_CONFIG = {
-  MA:{id:'MA',name:'Market Analyst',color:'#3B82F6',homeX:2.5,homeY:2.5},
-  DL:{id:'DL',name:'Desk Lead',color:'#F5B942',homeX:7,homeY:2.5},
-  RM:{id:'RM',name:'Risk Manager',color:'#F59E0B',homeX:11.5,homeY:2.5},
-  EX:{id:'EX',name:'Execution',color:'#10B981',homeX:2.5,homeY:7.5},
-  NS:{id:'NS',name:'News Analyst',color:'#A855F7',homeX:7,homeY:7.5},
-  TR:{id:'TR',name:'Trade Reviewer',color:'#06B6D4',homeX:11.5,homeY:7.5}
-};
+    if (viewName === 'tradingview' && !window.tvLoaded) loadTradingViewChart();
+    if (viewName === 'office') resizeCanvas(); // Fix canvas size bila tukar tab
+  }
 
-const DEPT_LABELS = [
-  {text:'ANALYSIS',x:2.5,y:1,color:'#3B82F6'},
-  {text:'CONTROL',x:7,y:1,color:'#F5B942'},
-  {text:'RISK',x:11.5,y:1,color:'#F59E0B'},
-  {text:'EXECUTION',x:2.5,y:6,color:'#10B981'},
-  {text:'RESEARCH',x:7,y:6,color:'#A855F7'},
-  {text:'REVIEW',x:11.5,y:6,color:'#06B6D4'}
-];
+  // ==========================================
+  // TRADINGVIEW WIDGET
+  // ==========================================
+  function loadTradingViewChart() {
+    window.tvLoaded = true;
+    const script = document.createElement('script');
+    script.src = "https://s3.tradingview.com/tv.js";
+    script.onload = function() {
+      new TradingView.widget({
+        "autosize": true, "symbol": "OANDA:XAUUSD", "interval": "15",
+        "timezone": "Asia/Kuala_Lumpur", "theme": "dark", "style": "1", "locale": "en",
+        "toolbar_bg": "#0F131C", "enable_publishing": false, "hide_side_toolbar": false,
+        "allow_symbol_change": true, "container_id": "tradingview_chart"
+      });
+      addLog('success', 'TradingView', 'XAUUSD chart loaded.');
+    };
+    document.head.appendChild(script);
+  }
 
-const STATE = { running:true, workflowActive:true, lastT:performance.now() };
+  // ==========================================
+  // MT5 CONNECTION
+  // ==========================================
+  function connectMT5(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-connect');
+    btn.textContent = 'Connecting...'; btn.disabled = true;
+    addLog('info', 'MT5', 'Attempting to connect to broker...');
+    setTimeout(() => {
+      btn.textContent = 'Connected ✓'; btn.style.background = 'var(--green)'; btn.style.color = '#fff';
+      addLog('success', 'MT5', 'Account connected successfully. AI ready to trade.');
+    }, 2000);
+  }
 
-const agents = Object.values(AGENT_CONFIG).map(c => ({
-  ...c, x:c.homeX, y:c.homeY, state:'working', path:[], 
-  speed:1.8, bubble:null, bubbleColor:'#fff', bubbleTimer:0, typing:0
-}));
+  // ==========================================
+  // LOGGING SYSTEM
+  // ==========================================
+  function addLog(type, title, message) {
+    const logList = document.getElementById('telemetry-log');
+    const time = new Date().toTimeString().slice(0,8);
+    const icon = type === 'success' ? '✓' : (type === 'info' ? 'i' : '!');
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `<div class="log-icon ${type}">${icon}</div><div class="log-text"><strong>${title} <span style="font-size:10px;color:#475569;">${time}</span></strong>${message}</div>`;
+    logList.prepend(item);
+  }
+  window.onload = () => addLog('info', 'System Boot', 'Mission Control initialized.');
 
-const A = {}; 
-agents.forEach(a => A[a.id] = a);
-const desks = agents.map(a => ({x:a.homeX-0.4, y:a.homeY-0.4, accent:a.color}));
+  // ==========================================
+  // CANVAS 2D OFFICE (Roblox Style)
+  // ==========================================
+  const canvas = document.getElementById('officeCanvas');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0;
+  let TILE = { W: 56, H: 28 }; // Saiz lantai
+  const GRID = { W: 14, H: 10 };
+  let ORIGIN = { x: 0, y: 0 };
 
-// ==========================================
-// ENGINE & RESIZE (Responsive)
-// ==========================================
-function resize() {
-  const rect = canvas.parentElement.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  
-  canvas.width = Math.floor(rect.width * dpr);
-  canvas.height = Math.floor(rect.height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  
-  W = rect.width; 
-  H = rect.height;
-  
-  ORIGIN.x = W / 2;
-  
-  // LOGIK ZOOM UNTUK MOBILE
-  if (W < 768) {
-    // Kalau kat phone, kecikkan saiz tile supaya muat
-    TILE.W = 36;
-    TILE.H = 18;
-    ORIGIN.y = H / 2 - 40; 
-  } else {
-    // Saiz desktop asal
-    TILE.W = 56;
-    TILE.H = 28;
+  function resizeCanvas() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    W = rect.width; H = rect.height;
+    ORIGIN.x = W / 2;
     ORIGIN.y = Math.max(130, H / 2 - 80);
-  }
-}
-window.addEventListener('resize', resize);
 
-function iso(gx, gy) {
-  return {
-    x: ORIGIN.x + (gx - gy) * TILE.W / 2,
-    y: ORIGIN.y + (gx + gy) * TILE.H / 2
+    // Auto zoom kalau skrin kecik
+    if (W < 800) { TILE.W = 40; TILE.H = 20; } else { TILE.W = 56; TILE.H = 28; }
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function iso(gx, gy) { return { x: ORIGIN.x + (gx - gy) * TILE.W / 2, y: ORIGIN.y + (gx + gy) * TILE.H / 2 }; }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // Agent Data
+  const AGENT_CONFIG = {
+    MA:{id:'MA',name:'Market Analyst',color:'#3B82F6',homeX:2.5,homeY:2.5},
+    DL:{id:'DL',name:'Desk Lead',color:'#F5B942',homeX:7,homeY:2.5},
+    RM:{id:'RM',name:'Risk Manager',color:'#F59E0B',homeX:11.5,homeY:2.5},
+    EX:{id:'EX',name:'Execution',color:'#10B981',homeX:2.5,homeY:7.5},
+    NS:{id:'NS',name:'News Analyst',color:'#A855F7',homeX:7,homeY:7.5},
+    TR:{id:'TR',name:'Trade Reviewer',color:'#06B6D4',homeX:11.5,homeY:7.5}
   };
-}
+  const DEPT_LABELS = [
+    {text:'ANALYSIS',x:2.5,y:1,color:'#3B82F6'}, {text:'CONTROL',x:7,y:1,color:'#F5B942'},
+    {text:'RISK',x:11.5,y:1,color:'#F59E0B'}, {text:'EXECUTION',x:2.5,y:6,color:'#10B981'},
+    {text:'RESEARCH',x:7,y:6,color:'#A855F7'}, {text:'REVIEW',x:11.5,y:6,color:'#06B6D4'}
+  ];
+  const agents = Object.values(AGENT_CONFIG).map(c => ({...c, x:c.homeX, y:c.homeY, state:'working', path:[], speed:1.8, bubble:null, bubbleColor:'#fff', bubbleTimer:0, typing:0}));
+  const A = {}; agents.forEach(a => A[a.id] = a);
+  const desks = agents.map(a => ({x:a.homeX-0.4, y:a.homeY-0.4, accent:a.color}));
 
-function rr(x, y, w, h, r) {
-  ctx.beginPath();
-  if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
-  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
-}
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-// ==========================================
-// UPDATE & ANIMATION
-// ==========================================
-function update(dt) {
-  agents.forEach(a => {
-    if (a.state === 'walking' && a.path.length > 0) {
-      const t = a.path[0];
-      const dx = t.x - a.x, dy = t.y - a.y;
-      const d = Math.hypot(dx, dy);
-      if (d < 0.05) {
-        a.x = t.x; a.y = t.y; a.path.shift();
-        if (a.path.length === 0) a.state = 'working';
-        if (t.cb) t.cb();
-      } else {
-        const s = Math.min(a.speed * dt, d);
-        a.x += dx / d * s; a.y += dy / d * s;
-      }
-    }
-    if (a.bubbleTimer > 0) { a.bubbleTimer -= dt; if (a.bubbleTimer <= 0) a.bubble = null; }
-    if (a.typing > 0) a.typing -= dt;
-  });
-}
-
-function walk(a, tx, ty) {
-  return new Promise(resolve => {
-    a.state = 'walking';
-    a.path = [{ x: tx, y: ty, cb: resolve }];
-  });
-}
-
-// ==========================================
-// SCENE DRAWING
-// ==========================================
-function drawFloor() {
-  for (let y = 0; y < GRID.H; y++) {
-    for (let x = 0; x < GRID.W; x++) {
-      const c = iso(x, y), dark = (x + y) % 2 === 0;
-      ctx.beginPath();
-      ctx.moveTo(c.x, c.y); ctx.lineTo(c.x + TILE.W/2, c.y + TILE.H/2);
-      ctx.lineTo(c.x, c.y + TILE.H); ctx.lineTo(c.x - TILE.W/2, c.y + TILE.H/2);
-      ctx.closePath();
-      ctx.fillStyle = dark ? '#111826' : '#0D121D'; 
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(31,41,55,0.55)'; ctx.lineWidth = 1; 
-      ctx.stroke();
-    }
-  }
-}
-
-function drawDeptLabels() {
-  DEPT_LABELS.forEach(l => {
-    const c = iso(l.x, l.y);
-    ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = l.color;
-    ctx.font = 'bold 20px Inter,sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(l.text, c.x, c.y); 
-    ctx.restore();
-  });
-  
-  // Meja Meeting
-  const mt = iso(7, 4.5);
-  ctx.beginPath();
-  ctx.moveTo(mt.x, mt.y - 22); ctx.lineTo(mt.x + 65, mt.y);
-  ctx.lineTo(mt.x, mt.y + 22); ctx.lineTo(mt.x - 65, mt.y);
-  ctx.closePath(); ctx.fillStyle = '#1E293B'; ctx.fill();
-  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.fillStyle = 'rgba(156,163,175,0.55)'; ctx.font = '9px Inter'; ctx.textAlign = 'center';
-  ctx.fillText('MEETING', mt.x, mt.y + 4);
-}
-
-function drawPlant(x, y) {
-  ctx.fillStyle = '#78350F'; ctx.fillRect(x-8, y-10, 16, 12);
-  ctx.fillStyle = '#166534'; ctx.beginPath(); ctx.arc(x, y-20, 10, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#22C55E'; ctx.beginPath();
-  ctx.arc(x-4, y-24, 6, 0, Math.PI*2); ctx.arc(x+5, y-22, 5, 0, Math.PI*2); ctx.fill();
-}
-
-function drawCoffee(x, y) {
-  ctx.fillStyle = '#334155'; ctx.fillRect(x-10, y-20, 20, 22);
-  ctx.fillStyle = '#0F172A'; ctx.fillRect(x-6, y-16, 12, 8);
-  ctx.fillStyle = '#EF4444'; ctx.fillRect(x-3, y-5, 6, 2);
-  const t = performance.now()/500;
-  ctx.strokeStyle = 'rgba(156,163,175,0.35)'; ctx.lineWidth = 1.5;
-  for (let i=0; i<3; i++) {
-    ctx.beginPath(); const sx=x-4+i*4, sy=y-22-i*3;
-    ctx.moveTo(sx,sy); ctx.quadraticCurveTo(sx+Math.sin(t+i)*3, sy-6, sx, sy-10); ctx.stroke();
-  }
-}
-
-function drawDecorations() {
-  const p1 = iso(0.5, 0.5); drawPlant(p1.x, p1.y+8);
-  const p2 = iso(13.5, 9.5); drawPlant(p2.x, p2.y+8);
-  const cf = iso(13, 5); drawCoffee(cf.x, cf.y+8);
-}
-
-function drawDesk(d) {
-  const c = iso(d.x, d.y), dw = TILE.W*1.3, dh = TILE.H*1.3, legH = 16;
-  ctx.beginPath(); ctx.moveTo(c.x-dw/2, c.y); ctx.lineTo(c.x, c.y+dh/2);
-  ctx.lineTo(c.x, c.y+dh/2+legH); ctx.lineTo(c.x-dw/2, c.y+legH); ctx.closePath();
-  ctx.fillStyle = '#1E293B'; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(c.x+dw/2, c.y); ctx.lineTo(c.x, c.y+dh/2);
-  ctx.lineTo(c.x, c.y+dh/2+legH); ctx.lineTo(c.x+dw/2, c.y+legH); ctx.closePath();
-  ctx.fillStyle = '#0B1120'; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(c.x-dw/2, c.y); ctx.lineTo(c.x, c.y-dh/2);
-  ctx.lineTo(c.x+dw/2, c.y); ctx.lineTo(c.x, c.y+dh/2); ctx.closePath();
-  ctx.fillStyle = '#2A3444'; ctx.fill();
-  ctx.strokeStyle = '#475569'; ctx.lineWidth = 1; ctx.stroke();
-  
-  const mx=c.x, my=c.y-4;
-  ctx.fillStyle = '#0A0E17'; ctx.fillRect(mx-11, my-14, 22, 14);
-  ctx.fillStyle = d.accent; ctx.fillRect(mx-9, my-12, 18, 10);
-  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(mx-8, my-11, 8, 8);
-  ctx.fillStyle = '#0A0E17'; ctx.fillRect(mx-2, my, 4, 3); ctx.fillRect(mx-5, my+3, 10, 2);
-}
-
-function drawAgent(a) {
-  const c = iso(a.x, a.y), sx = c.x, sy = c.y + 14;
-  const walking = a.state === 'walking';
-  const t = performance.now() / 90;
-  const legSwing = walking ? Math.sin(t)*3 : 0;
-  const armSwing = walking ? Math.sin(t)*2 : (a.typing > 0 ? Math.sin(t*2.2)*1.5 : 0);
-  
-  ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = '#000';
-  ctx.beginPath(); ctx.ellipse(sx, sy, 15, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.restore();
-  
-  ctx.fillStyle = '#0F172A';
-  ctx.fillRect(sx-8, sy-24, 6, 24+legSwing);
-  ctx.fillRect(sx+2, sy-24, 6, 24-legSwing);
-  ctx.fillStyle = '#1E293B';
-  ctx.fillRect(sx-8, sy-3+legSwing, 6, 3); ctx.fillRect(sx+2, sy-3-legSwing, 6, 3);
-  
-  ctx.fillStyle = a.color; ctx.fillRect(sx-11, sy-48, 22, 24);
-  ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(sx-11, sy-48, 4, 24);
-  ctx.fillStyle = a.color;
-  ctx.fillRect(sx-15, sy-46+armSwing, 4, 18);
-  ctx.fillRect(sx+11, sy-46-armSwing, 4, 18);
-  
-  ctx.fillStyle = '#FDE047';
-  ctx.fillRect(sx-15, sy-28+armSwing, 4, 4);
-  ctx.fillRect(sx+11, sy-28-armSwing, 4, 4);
-  
-  ctx.fillStyle = '#FDE047'; rr(sx-10, sy-68, 20, 20, 5); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.07)'; rr(sx-10, sy-68, 20, 6, 5); ctx.fill();
-  
-  ctx.fillStyle = '#111';
-  ctx.fillRect(sx-5, sy-61, 2.5, 3.5); ctx.fillRect(sx+2.5, sy-61, 2.5, 3.5);
-  ctx.strokeStyle = '#111'; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.arc(sx, sy-55, 4, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
-  
-  const nameY = sy - 82;
-  ctx.font = 'bold 10px Inter,sans-serif'; ctx.textAlign = 'center';
-  const tw = ctx.measureText(a.name).width;
-  ctx.fillStyle = 'rgba(10,14,23,0.92)'; rr(sx-tw/2-6, nameY-9, tw+12, 15, 4); ctx.fill();
-  ctx.strokeStyle = a.color; ctx.lineWidth = 1; rr(sx-tw/2-6, nameY-9, tw+12, 15, 4); ctx.stroke();
-  ctx.fillStyle = a.color; ctx.fillText(a.name, sx, nameY+2);
-  
-  if (a.bubble) {
-    const by = nameY - 16;
-    ctx.font = 'bold 11px Inter,sans-serif';
-    const bw = ctx.measureText(a.bubble).width + 16;
-    ctx.fillStyle = a.bubbleColor; rr(sx-bw/2, by-20, bw, 20, 8); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(sx-4, by); ctx.lineTo(sx+4, by); ctx.lineTo(sx, by+6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#0A0E17'; ctx.fillText(a.bubble, sx, by-6);
-  }
-}
-
-function render() {
-  ctx.clearRect(0, 0, W, H);
-  drawFloor(); drawDeptLabels(); drawDecorations();
-  const ds = [];
-  desks.forEach(d => ds.push({ depth: d.x+d.y, draw: () => drawDesk(d) }));
-  agents.forEach(a => ds.push({ depth: a.x+a.y+0.1, draw: () => drawAgent(a) }));
-  ds.sort((a,b) => a.depth - b.depth); ds.forEach(d => d.draw());
-}
-
-function tick(now) {
-  const dt = Math.min((now - STATE.lastT) / 1000, 0.1);
-  STATE.lastT = now;
-  update(dt); render();
-  if (STATE.running) requestAnimationFrame(tick);
-}
-
-// ==========================================
-// WORKFLOW & LOGGING
-// ==========================================
-let logCount = 0;
-function addLog(who, msg, color) {
-  logCount++;
-  document.getElementById('counter').textContent = logCount;
-  const log = document.getElementById('log');
-  const e = document.createElement('div');
-  e.className = 'log-entry';
-  const time = new Date().toTimeString().slice(0, 8);
-  e.innerHTML = `<span class="log-who" style="color:${color}">${who}</span><span class="log-time">${time}</span><span class="log-msg">${msg}</span>`;
-  log.prepend(e);
-  while (log.children.length > 30) log.removeChild(log.lastChild);
-}
-
-async function workflow() {
-  while (STATE.running) {
-    await sleep(3000);
-    if (!STATE.workflowActive) continue;
-    
-    A.MA.bubble='📊 SIGNAL'; A.MA.bubbleColor='#3B82F6'; A.MA.bubbleTimer=2;
-    addLog('MA','FIB-01 setup on M15','#3B82F6');
-    await sleep(2000);
-    
-    await walk(A.MA, A.DL.homeX-1.2, A.DL.homeY);
-    A.MA.bubble='→ SIGNAL'; A.MA.bubbleTimer=1.8;
-    await sleep(1800);
-    
-    A.DL.bubble='✓ CHECK'; A.DL.bubbleColor='#F5B942'; A.DL.bubbleTimer=1.5;
-    await sleep(1400);
-    
-    await walk(A.DL, A.RM.homeX-1.2, A.RM.homeY);
-    A.DL.bubble='RISK?'; A.DL.bubbleTimer=1.5;
-    addLog('DL','Requesting risk approval','#F5B942');
-    await sleep(1900);
-    
-    A.RM.bubble='✓ PASS'; A.RM.bubbleColor='#F59E0B'; A.RM.bubbleTimer=2;
-    addLog('RM','Approved: SL 33p, lot 0.10','#F59E0B');
-    await sleep(1900);
-    
-    A.EX.typing=2.5; A.EX.bubble='⚡ FILLED'; A.EX.bubbleColor='#10B981'; A.EX.bubbleTimer=2.5;
-    addLog('EX','BUY 0.10 @ 2650.45','#10B981');
-    await sleep(2400);
-    
-    A.MA.bubble=null; A.DL.bubble=null;
-    await Promise.all([ walk(A.MA, A.MA.homeX, A.MA.homeY), walk(A.DL, A.DL.homeX, A.DL.homeY) ]);
-    
-    A.TR.typing=2; A.TR.bubble='✓ REVIEW'; A.TR.bubbleColor='#06B6D4'; A.TR.bubbleTimer=2;
-    addLog('TR','Post-trade: +$42.30','#06B6D4');
-    await sleep(2500);
-    A.TR.bubble=null;
-    addLog('SYS','Cycle complete · 3 trades today','#9CA3AF');
-  }
-}
-
-// ==========================================
-// INIT
-// ==========================================
-setInterval(() => {
-  document.getElementById('clock').textContent = new Date().toTimeString().slice(0, 8);
-}, 1000);
-
-document.getElementById('killSwitch').addEventListener('click', (e) => {
-  STATE.workflowActive = !STATE.workflowActive;
-  const btn = e.currentTarget;
-  if (STATE.workflowActive) {
-    btn.classList.remove('active');
-    btn.textContent = '⏻ Kill Switch';
-    addLog('SYS', 'Trading workflow resumed', '#10B981');
-  } else {
-    btn.classList.add('active');
-    btn.textContent = '⏸ STOPPED';
-    addLog('SYS', 'KILL SWITCH — workflow paused', '#EF4444');
+  // Animation Loop
+  function update(dt) {
     agents.forEach(a => {
-      a.bubble=null; a.bubbleTimer=0; a.typing=0; a.path=[]; a.state='working';
-      a.x=a.homeX; a.y=a.homeY;
+      if (a.state === 'walking' && a.path.length > 0) {
+        const t = a.path[0], dx = t.x - a.x, dy = t.y - a.y, d = Math.hypot(dx, dy);
+        if (d < 0.05) {
+          a.x = t.x; a.y = t.y; a.path.shift();
+          if (a.path.length === 0) a.state = 'working';
+          if (t.cb) t.cb();
+        } else {
+          const s = Math.min(a.speed * dt, d);
+          a.x += dx / d * s; a.y += dy / d * s;
+        }
+      }
+      if (a.bubbleTimer > 0) { a.bubbleTimer -= dt; if (a.bubbleTimer <= 0) a.bubble = null; }
+      if (a.typing > 0) a.typing -= dt;
     });
   }
-});
+  function walk(a, tx, ty) { return new Promise(resolve => { a.state = 'walking'; a.path = [{ x: tx, y: ty, cb: resolve }]; }); }
 
-resize();
-requestAnimationFrame(tick);
-workflow();
-addLog('SYS', 'Office online · 6 staf AI', '#9CA3AF');
+  // Drawing Functions
+  function drawFloor() {
+    for (let y=0; y<GRID.H; y++) for (let x=0; x<GRID.W; x++) {
+      const c = iso(x,y), dark = (x+y)%2===0;
+      ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(c.x+TILE.W/2,c.y+TILE.H/2); ctx.lineTo(c.x,c.y+TILE.H); ctx.lineTo(c.x-TILE.W/2,c.y+TILE.H/2); ctx.closePath();
+      ctx.fillStyle = dark ? '#111826' : '#0D121D'; ctx.fill();
+      ctx.strokeStyle = 'rgba(31,41,55,0.55)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  function drawDeptLabels() {
+    DEPT_LABELS.forEach(l => {
+      const c = iso(l.x,l.y);
+      ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = l.color; ctx.font = 'bold 20px Inter,sans-serif'; ctx.textAlign = 'center'; ctx.fillText(l.text,c.x,c.y); ctx.restore();
+    });
+  }
+  function drawDesk(d) {
+    const c = iso(d.x,d.y), dw = TILE.W*1.3, dh = TILE.H*1.3, legH = 16;
+    ctx.beginPath(); ctx.moveTo(c.x-dw/2,c.y); ctx.lineTo(c.x,c.y+dh/2); ctx.lineTo(c.x,c.y+dh/2+legH); ctx.lineTo(c.x-dw/2,c.y+legH); ctx.closePath(); ctx.fillStyle = '#1E293B'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(c.x+dw/2,c.y); ctx.lineTo(c.x,c.y+dh/2); ctx.lineTo(c.x,c.y+dh/2+legH); ctx.lineTo(c.x+dw/2,c.y+legH); ctx.closePath(); ctx.fillStyle = '#0B1120'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(c.x-dw/2,c.y); ctx.lineTo(c.x,c.y-dh/2); ctx.lineTo(c.x+dw/2,c.y); ctx.lineTo(c.x,c.y+dh/2); ctx.closePath(); ctx.fillStyle = '#2A3444'; ctx.fill(); ctx.strokeStyle = '#475569'; ctx.lineWidth = 1; ctx.stroke();
+    const mx = c.x, my = c.y-4;
+    ctx.fillStyle = '#0A0E17'; ctx.fillRect(mx-11,my-14,22,14);
+    ctx.fillStyle = d.accent; ctx.fillRect(mx-9,my-12,18,10);
+  }
+  function rr(x, y, w, h, r) { ctx.beginPath(); if(ctx.roundRect){ctx.roundRect(x,y,w,h,r);return;} ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  
+  function drawAgent(a) {
+    const c = iso(a.x,a.y), sx = c.x, sy = c.y + 14;
+    const walking = a.state === 'walking';
+    const t = performance.now() / 90;
+    const legSwing = walking ? Math.sin(t)*3 : 0;
+    const armSwing = walking ? Math.sin(t)*2 : (a.typing > 0 ? Math.sin(t*2.2)*1.5 : 0);
+
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(sx,sy,15,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+    
+    ctx.fillStyle = '#0F172A'; ctx.fillRect(sx-8,sy-24,6,24+legSwing); ctx.fillRect(sx+2,sy-24,6,24-legSwing);
+    ctx.fillStyle = '#1E293B'; ctx.fillRect(sx-8,sy-3+legSwing,6,3); ctx.fillRect(sx+2,sy-3-legSwing,6,3);
+
+    ctx.fillStyle = a.color; ctx.fillRect(sx-11,sy-48,22,24);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(sx-11,sy-48,4,24);
+    ctx.fillStyle = a.color; ctx.fillRect(sx-15,sy-46+armSwing,4,18); ctx.fillRect(sx+11,sy-46-armSwing,4,18);
+
+    ctx.fillStyle = '#FDE047'; ctx.fillRect(sx-15,sy-28+armSwing,4,4); ctx.fillRect(sx+11,sy-28-armSwing,4,4);
+    ctx.fillStyle = '#FDE047'; rr(sx-10,sy-68,20,20,5); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.07)'; rr(sx-10,sy-68,20,6,5); ctx.fill();
+    ctx.fillStyle = '#111'; ctx.fillRect(sx-5,sy-61,2.5,3.5); ctx.fillRect(sx+2.5,sy-61,2.5,3.5);
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(sx,sy-55,4,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+
+    const nameY = sy-82;
+    ctx.font = 'bold 10px Inter,sans-serif'; ctx.textAlign = 'center';
+    const tw = ctx.measureText(a.name).width;
+    ctx.fillStyle = 'rgba(10,14,23,0.92)'; rr(sx-tw/2-6,nameY-9,tw+12,15,4); ctx.fill();
+    ctx.strokeStyle = a.color; ctx.lineWidth = 1; rr(sx-tw/2-6,nameY-9,tw+12,15,4); ctx.stroke();
+    ctx.fillStyle = a.color; ctx.fillText(a.name,sx,nameY+2);
+
+    if (a.bubble) {
+      const by = nameY-16; ctx.font = 'bold 11px Inter,sans-serif';
+      const bw = ctx.measureText(a.bubble).width+16;
+      ctx.fillStyle = a.bubbleColor; rr(sx-bw/2,by-20,bw,20,8); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(sx-4,by); ctx.lineTo(sx+4,by); ctx.lineTo(sx,by+6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#0A0E17'; ctx.fillText(a.bubble,sx,by-6);
+    }
+  }
+
+  function render() {
+    ctx.clearRect(0,0,W,H);
+    drawFloor(); drawDeptLabels();
+    const ds = [];
+    desks.forEach(d => ds.push({ depth: d.x+d.y, draw: () => drawDesk(d) }));
+    agents.forEach(a => ds.push({ depth: a.x+a.y+0.1, draw: () => drawAgent(a) }));
+    ds.sort((a,b) => a.depth - b.depth).forEach(d => d.draw());
+  }
+
+  let lastT = performance.now();
+  function tick(now) {
+    const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now;
+    update(dt); render(); requestAnimationFrame(tick);
+  }
+
+  // Workflow Animation
+  async function workflow() {
+    while (true) {
+      await sleep(3000);
+      A.MA.bubble='📊 SIGNAL'; A.MA.bubbleColor='#3B82F6'; A.MA.bubbleTimer=2;
+      addLog('info', 'Market Analyst', 'FIB-01 setup detected on M15.');
+      await sleep(2000);
+      
+      await walk(A.MA, A.DL.homeX-1.2, A.DL.homeY);
+      A.MA.bubble='→ SIGNAL'; A.MA.bubbleTimer=1.8;
+      await sleep(1800);
+      
+      A.DL.bubble='✓ CHECK'; A.DL.bubbleColor='#F5B942'; A.DL.bubbleTimer=1.5;
+      await sleep(1400);
+      
+      await walk(A.DL, A.RM.homeX-1.2, A.RM.homeY);
+      A.DL.bubble='RISK?'; A.DL.bubbleTimer=1.5;
+      addLog('info', 'Desk Lead', 'Requesting risk approval.');
+      await sleep(1900);
+      
+      A.RM.bubble='✓ PASS'; A.RM.bubbleColor='#F59E0B'; A.RM.bubbleTimer=2;
+      addLog('success', 'Risk Manager', 'Approved: SL 33p, lot 0.10.');
+      await sleep(1900);
+      
+      A.EX.typing=2.5; A.EX.bubble='⚡ FILLED'; A.EX.bubbleColor='#10B981'; A.EX.bubbleTimer=2.5;
+      addLog('success', 'Execution', 'BUY 0.10 @ 2650.45.');
+      await sleep(2400);
+      
+      A.MA.bubble=null; A.DL.bubble=null;
+      await Promise.all([ walk(A.MA, A.MA.homeX, A.MA.homeY), walk(A.DL, A.DL.homeX, A.DL.homeY) ]);
+      
+      A.TR.typing=2; A.TR.bubble='✓ REVIEW'; A.TR.bubbleColor='#06B6D4'; A.TR.bubbleTimer=2;
+      addLog('info', 'Trade Reviewer', 'Post-trade complete +$42.30.');
+      await sleep(2500);
+      A.TR.bubble=null;
+    }
+  }
+
+  // Init Canvas
+  resizeCanvas();
+  requestAnimationFrame(tick);
+  workflow();
 </script>
 </body>
 </html>
